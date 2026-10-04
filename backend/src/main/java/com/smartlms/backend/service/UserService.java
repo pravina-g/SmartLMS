@@ -1,21 +1,27 @@
 package com.smartlms.backend.service;
 
-import com.smartlms.backend.entity.User;
-import com.smartlms.backend.repository.UserRepository;
+import java.util.Optional;
+
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import java.util.Optional;
+import com.smartlms.backend.entity.User;
+import com.smartlms.backend.repository.UserRepository;
 
 @Service
 public class UserService {
 
     private final UserRepository userRepository;
 
+    private final BCryptPasswordEncoder passwordEncoder =
+            new BCryptPasswordEncoder();
+
     public UserService(UserRepository userRepository) {
         this.userRepository = userRepository;
     }
 
     public User saveUser(User user) {
+        user.setPassword(passwordEncoder.encode(user.getPassword()));
         return userRepository.save(user);
     }
 
@@ -25,5 +31,9 @@ public class UserService {
 
     public boolean existsByEmail(String email) {
         return userRepository.existsByEmail(email);
+    }
+
+    public boolean verifyPassword(String rawPassword, String encodedPassword) {
+        return passwordEncoder.matches(rawPassword, encodedPassword);
     }
 }
