@@ -4,6 +4,7 @@ import java.util.List;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -25,7 +26,32 @@ public class CourseController {
         this.courseService = courseService;
     }
 
+    // Any authenticated user can view all courses
+    @GetMapping
+    public ResponseEntity<List<Course>> getAllCourses() {
+
+        return ResponseEntity.ok(
+                courseService.getAllCourses()
+        );
+    }
+
+    // Any authenticated user can view a single course
+    @GetMapping("/{id}")
+    public ResponseEntity<?> getCourseById(
+            @PathVariable Long id) {
+
+        return courseService.getCourseById(id)
+                .map(ResponseEntity::ok)
+                .orElse(
+                        ResponseEntity
+                                .status(HttpStatus.NOT_FOUND)
+                                .body("Course not found")
+                );
+    }
+
+    // Only INSTRUCTOR and ADMIN can create courses
     @PostMapping
+    @PreAuthorize("hasAnyRole('INSTRUCTOR', 'ADMIN')")
     public ResponseEntity<Course> createCourse(
             @RequestBody Course course) {
 
@@ -36,32 +62,14 @@ public class CourseController {
                 .body(savedCourse);
     }
 
-    @GetMapping
-    public ResponseEntity<List<Course>> getAllCourses() {
-
-        return ResponseEntity.ok(
-                courseService.getAllCourses()
-        );
-    }
-
-    @GetMapping("/{id}")
-    public ResponseEntity<?> getCourseById(
-            @PathVariable Long id) {
-
-        return courseService.getCourseById(id)
-                .map(ResponseEntity::ok)
-                .orElse(
-                        ResponseEntity
-                                .status(HttpStatus.NOT_FOUND)
-                                .body(null)
-                );
-    }
-
+    // Only INSTRUCTOR and ADMIN can delete courses
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyRole('INSTRUCTOR', 'ADMIN')")
     public ResponseEntity<String> deleteCourse(
             @PathVariable Long id) {
 
         if (courseService.getCourseById(id).isEmpty()) {
+
             return ResponseEntity
                     .status(HttpStatus.NOT_FOUND)
                     .body("Course not found");
