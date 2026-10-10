@@ -1,8 +1,8 @@
 
-
 package com.smartlms.backend.repository;
 
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 
@@ -17,4 +17,16 @@ public interface RecommendationRepository
             Long studentId,
             Long topicId,
             Long lessonId);
+
+    Optional<Recommendation>
+            findByStudentIdAndTopicIdAndLessonIdAndCompletedFalse(
+                    Long studentId,
+                    Long topicId,
+                    Long lessonId);
+
+    Optional<Recommendation>
+            findByStudentIdAndTopicIdAndLessonId(
+                    Long studentId,
+                    Long topicId,
+                    Long lessonId);
 }

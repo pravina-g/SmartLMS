@@ -1,17 +1,27 @@
 
 package com.smartlms.backend.service;
 
-import com.smartlms.backend.entity.*;
-import com.smartlms.backend.repository.*;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.smartlms.backend.entity.Lesson;
+import com.smartlms.backend.entity.Recommendation;
+import com.smartlms.backend.entity.StudentTopicPerformance;
+import com.smartlms.backend.entity.Topic;
+import com.smartlms.backend.repository.LessonRepository;
+import com.smartlms.backend.repository.RecommendationRepository;
+import com.smartlms.backend.repository.StudentTopicPerformanceRepository;
+import com.smartlms.backend.repository.TopicRepository;
+
 @Service
 public class RecommendationService {
+
+    private static final BigDecimal WEAK_SCORE =
+            new BigDecimal("50.00");
 
     private final StudentTopicPerformanceRepository performanceRepository;
     private final TopicRepository topicRepository;
@@ -40,12 +50,12 @@ public class RecommendationService {
 
         for (StudentTopicPerformance performance : performances) {
 
-            if (performance.getScorePercentage()
-                    .compareTo(new BigDecimal("50.00")) >= 0) {
+            Long topicId = performance.getTopicId();
+            BigDecimal score = performance.getScorePercentage();
+
+            if (score == null) {
                 continue;
             }
-
-            Long topicId = performance.getTopicId();
 
             Topic topic = topicRepository.findById(topicId)
                     .orElse(null);
@@ -56,6 +66,10 @@ public class RecommendationService {
 
             Long lessonId = topic.getLessonId();
 
+            if (lessonId == null) {
+                continue;
+            }
+
             Lesson lesson = lessonRepository.findById(lessonId)
                     .orElse(null);
 
@@ -63,12 +77,40 @@ public class RecommendationService {
                 continue;
             }
 
-            boolean alreadyExists =
-                    recommendationRepository
-                    .existsByStudentIdAndTopicIdAndLessonId(
+            var existing = recommendationRepository
+                    .findByStudentIdAndTopicIdAndLessonId(
                             studentId, topicId, lessonId);
 
-            if (alreadyExists) {
+            if (score.compareTo(WEAK_SCORE) >= 0) {
+
+                existing.ifPresent(recommendation -> {
+                    recommendation.setCompleted(true);
+                    recommendation.setReason(
+                            "Your score for " + topic.getName()
+                            + " is " + score
+                            + "%. No further review is currently needed.");
+                    recommendationRepository.save(recommendation);
+                });
+
+                continue;
+            }
+
+            if (existing.isPresent()) {
+
+                Recommendation recommendation = existing.get();
+
+                recommendation.setReason(
+                        "Your score for " + topic.getName()
+                        + " is " + score
+                        + "%. Review this lesson to improve your understanding.");
+
+                recommendation.setRecommendationTest(
+                        "Review the lesson and attempt its related quiz again.");
+
+                recommendation.setLesson(lesson.getTitle());
+                recommendation.setCompleted(false);
+
+                recommendationRepository.save(recommendation);
                 continue;
             }
 
@@ -81,14 +123,13 @@ public class RecommendationService {
 
             recommendation.setReason(
                     "Your score for " + topic.getName()
-                    + " is " + performance.getScorePercentage()
+                    + " is " + score
                     + "%. Review this lesson to improve your understanding.");
 
             recommendation.setRecommendationTest(
                     "Review the lesson and attempt its related quiz again.");
 
-            generated.add(
-                    recommendationRepository.save(recommendation));
+            generated.add(recommendationRepository.save(recommendation));
         }
 
         return generated;

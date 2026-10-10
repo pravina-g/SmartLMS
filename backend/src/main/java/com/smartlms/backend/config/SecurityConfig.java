@@ -1,3 +1,4 @@
+
 package com.smartlms.backend.config;
 
 import org.springframework.context.annotation.Bean;
@@ -16,7 +17,8 @@ public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
 
-    public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter) {
+    public SecurityConfig(
+            JwtAuthenticationFilter jwtAuthenticationFilter) {
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
     }
 
@@ -41,7 +43,8 @@ public class SecurityConfig {
                 .requestMatchers(
                     "/",
                     "/api/users/register",
-                    "/api/users/login"
+                    "/api/users/login",
+                    "/api/auth/login"
                 ).permitAll()
                 .anyRequest().authenticated()
             )
